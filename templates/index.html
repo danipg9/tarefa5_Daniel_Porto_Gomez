@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Resumen de hoy ({{ hoy }})</h2>
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-dark mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Kcal</h5>
+                        <p class="fs-2">{{ resumen.kcal }} / {{ current_user.target_kcal }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Proteína</h5>
+                        <p class="fs-2">{{ resumen.proteinas }}g / {{ current_user.target_protein }}g</p>
+                    </div>
+                </div>
+            </div>
+            </div>
+        <div class="mt-4">
+            <a href="/add_log" class="btn btn-success">Registrar Alimento</a>
+            <a href="/add_food" class="btn btn-outline-primary">Nuevo Alimento al Catálogo</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
