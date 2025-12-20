@@ -4,11 +4,15 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    # Objetivos personalizados que pediste
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    fecha_aceptacion_politica = db.Column(db.DateTime, nullable=True)
+    
+    # Objetivos nutricionales (defaults)
     target_kcal = db.Column(db.Integer, default=2000)
     target_protein = db.Column(db.Integer, default=150)
     target_carbs = db.Column(db.Integer, default=200)

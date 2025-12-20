@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h4 class="mb-0 text-center">Registro de usuario</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre de usuario</label>
+                        <input type="text" name="username" class="form-control" value="{{ username if username else '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Correo electrónico</label>
+                        <input type="email" name="email" class="form-control" value="{{ email if email else '' }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Contraseña</label>
+                            <input type="password" name="password" class="form-control" required>
+                            <div class="mt-2 small text-muted">
+                                <strong>Longitud mínima 8 caracteres donde al menos:</strong>
+                                <ul class="mb-0">
+                                    <li>1 letra minúscula</li>
+                                    <li>1 letra mayúscula</li>
+                                    <li>1 número</li>
+                                    <li>1 carácter especial</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Confirmar contraseña</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" name="politica_privacidad" id="politica" required>
+                        <label class="form-check-label small" for="politica">
+                            Acepto la política de privacidad y el tratamiento de mis datos.
+                        </label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Crear cuenta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
