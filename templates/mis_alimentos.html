@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark">Mi Catálogo Nutricional</h2>
+            <div class="btn-group">
+                <a href="/add_food" class="btn btn-outline-primary">Añadir Alimento</a>
+                <a href="/add_recipe" class="btn btn-primary">Crear Receta</a>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-3" id="catalogoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="alimentos-tab" data-bs-toggle="tab"
+                    data-bs-target="#alimentos" type="button" role="tab">Alimentos Base</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="recetas-tab" data-bs-toggle="tab" data-bs-target="#recetas"
+                    type="button" role="tab">Mis Recetas</button>
+            </li>
+        </ul>
+
+        <div class="tab-content card shadow-sm border-0 p-3" id="catalogoTabsContent">
+            <div class="tab-pane fade show active" id="alimentos" role="tabpanel">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Kcal (100g)</th>
+                            <th>Prot.</th>
+                            <th>Carbos</th>
+                            <th>Grasas</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in alimentos %}
+                        <tr>
+                            <td class="fw-bold">{{ f.name }}</td>
+                            <td>{{ f.kcal_100g }}</td>
+                            <td>{{ f.prot_100g }}g</td>
+                            <td>{{ f.carb_100g }}g</td>
+                            <td>{{ f.fat_100g }}g</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('edit_food', food_id=f.id) }}"
+                                    class="btn btn-sm btn-link text-primary">Editar</a>
+                                <a href="{{ url_for('delete_food', food_id=f.id) }}"
+                                    class="btn btn-sm btn-link text-danger"
+                                    onclick="return confirm('¿Eliminar alimento?')">Borrar</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="tab-pane fade" id="recetas" role="tabpanel">
+                <div class="accordion accordion-flush" id="accordionRecetas">
+                    {% for r in recetas %}
+                    <div class="accordion-item border-bottom">
+                        <h2 class="accordion-header" id="heading{{ r.id }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapse{{ r.id }}">
+                                <div class="d-flex justify-content-between w-100 align-items-center">
+                                    <div>
+                                        <span class="fw-bold text-primary">{{ r.name }}</span>
+                                        <span class="badge bg-light text-dark border ms-2">{{ r.ingredients|length }}
+                                            ingredientes</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ r.id }}" class="accordion-collapse collapse"
+                            data-bs-parent="#accordionRecetas">
+                            <div class="accordion-body bg-light">
+                                <ul class="list-group list-group-flush shadow-sm rounded">
+                                    {% for ing in r.ingredients %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ ing.food.name }}
+                                        <span class="badge bg-secondary rounded-pill">{{ ing.grams }} g</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="mt-3 d-flex gap-2 justify-content-end">
+                                    <a href="{{ url_for('edit_recipe', recipe_id=r.id) }}"
+                                        class="btn btn-sm btn-outline-primary">
+                                        Modificar receta
+                                    </a>
+                                    <a href="{{ url_for('delete_recipe', recipe_id=r.id) }}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('¿Borrar esta receta?')">
+                                        Eliminar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">Aún no has creado ninguna receta.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="/" class="btn btn-link text-secondary">&laquo; Volver al diario</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,7 +4,6 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -12,7 +11,7 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(255), nullable=False)
     fecha_aceptacion_politica = db.Column(db.DateTime, nullable=True)
     
-    # Objetivos nutricionales (defaults)
+    # Objetivos nutricionales actuales
     target_kcal = db.Column(db.Integer, default=2000)
     target_protein = db.Column(db.Integer, default=150)
     target_carbs = db.Column(db.Integer, default=200)
@@ -29,15 +28,14 @@ class Food(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class Recipe(db.Model):
-    """Para crear 'Productos' o combinaciones como el batido."""
+    """Combinaciones de alimentos (ej: Batido de volumen)."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    # Una receta tiene muchos ingredientes
     ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
 class RecipeIngredient(db.Model):
-    """La relación entre un alimento y una receta (ej: 30g de crema cacahuete en el Batido)."""
+    """Relación alimento-receta con su peso específico."""
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
     food_id = db.Column(db.Integer, db.ForeignKey('food.id'))
@@ -45,16 +43,29 @@ class RecipeIngredient(db.Model):
     food = db.relationship('Food')
 
 class DailyLog(db.Model):
-    """Donde se almacena lo que comes cada día (tu resumen diario)."""
+    """Registro histórico de consumo y objetivos."""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     
-    # Podemos registrar un alimento suelto o una receta entera
     food_id = db.Column(db.Integer, db.ForeignKey('food.id'), nullable=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    grams = db.Column(db.Float, nullable=False) 
     
-    grams = db.Column(db.Float, nullable=False) # Cantidad total consumida
+    # --- TRAZABILIDAD HISTÓRICA ---
+    target_kcal_snapshot = db.Column(db.Integer)
+    target_protein_snapshot = db.Column(db.Integer)
+    target_carbs_snapshot = db.Column(db.Integer)
+    target_fat_snapshot = db.Column(db.Integer)
+
+    def get_macros(self):
+        """Calcula y devuelve los macros del registro actual."""
+        from logic import calcular_macros_alimento, calcular_macros_receta
+        if self.food:
+            return calcular_macros_alimento(self.grams, self.food)
+        elif self.recipe:
+            return calcular_macros_receta(self.grams, self.recipe)
+        return {"kcal": 0, "proteinas": 0, "carbohidratos": 0, "grasas": 0}
     
     food = db.relationship('Food')
     recipe = db.relationship('Recipe')

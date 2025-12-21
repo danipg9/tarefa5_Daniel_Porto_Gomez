@@ -1,31 +1,104 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2>Hola Daniel, resumen de hoy ({{ hoy }})</h2>
-        <div class="row mt-4">
-            <div class="col-md-3">
-                <div class="card text-white bg-dark mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Kcal</h5>
-                        <p class="fs-2">{{ resumen.kcal }} / {{ current_user.target_kcal }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-primary mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Proteína</h5>
-                        <p class="fs-2">{{ resumen.proteinas }}g / {{ current_user.target_protein }}g</p>
-                    </div>
-                </div>
-            </div>
-            </div>
+<div class="row mb-4">
+    <div class="col-md-12 text-center">
+        <div class="d-flex justify-content-center align-items-center gap-3">
+            <a href="{{ url_for('index', date_str=prev_day) }}" class="btn btn-outline-primary btn-sm">&laquo;
+                Anterior</a>
+            <h2 class="mb-0">Resumen de hoy ({{ hoy.strftime('%d/%m/%Y') }})</h2>
+            <a href="{{ url_for('index', date_str=next_day) }}" class="btn btn-outline-primary btn-sm">Siguiente
+                &raquo;</a>
+        </div>
+    </div>
+</div>
 
-        <div class="mt-4">
-            <a href="/add_log" class="btn btn-success">Registrar Consumo</a>
-            <a href="/add_food" class="btn btn-outline-primary">Añadir Alimento al Catálogo</a>
-            <a href="/perfil" class="btn btn-outline-secondary">Configurar Mis Objetivos</a>
+<div class="row">
+    {% macro render_card(label, actual, objetivo, unidad='g') %}
+    <div class="col-md-3 mb-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center">
+                <h6 class="text-muted small fw-bold">{{ label }}</h6>
+                <p class="fs-3 mb-0">{{ actual }}{{ unidad }} / {{ objetivo }}{{ unidad }}</p>
+                <div class="progress mt-2" style="height: 10px;">
+                    {% set porcentaje = (actual * 100 / objetivo) if objetivo > 0 else 0 %}
+
+                    {# Lógica de colores: <50 Rojo, 50-99 Naranja,>=100 Verde #}
+                        {% if porcentaje < 50 %} {% set color_clase="bg-danger" %} {% elif porcentaje < 100 %} {% set
+                            color_clase="bg-warning" %} {% else %} {% set color_clase="bg-success" %} {% endif %} <div
+                            class="progress-bar {{ color_clase }}" role="progressbar"
+                            style="width: {{ [porcentaje, 100]|min }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{{ render_card('Kcal', resumen.kcal, targets.kcal, unidad='') }}
+{{ render_card('Proteína', resumen.proteinas, targets.prot) }}
+{{ render_card('Carbohidratos', resumen.carbohidratos, targets.carbs) }}
+{{ render_card('Grasas', resumen.grasas, targets.fat) }}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0">Comidas registradas</h5>
+                <a href="/add_log" class="btn btn-primary btn-sm">Registrar Consumo</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th class="ps-3">Alimento</th>
+                            <th>Cantidad</th>
+                            <th>Kcal</th>
+                            <th>Prot.</th>
+                            <th>Carbos</th>
+                            <th>Grasas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        {% set m = log.get_macros() %}
+                        <tr>
+                            <td class="ps-3 fw-bold">{{ log.food.name if log.food else log.recipe.name }}</td>
+                            <td>{{ log.grams }} g</td>
+                            <td>{{ m.kcal | round(1) }}</td>
+                            <td>{{ m.proteinas | round(1) }}g</td>
+                            <td>{{ m.carbohidratos | round(1) }}g</td>
+                            <td>{{ m.grasas | round(1) }}g</td>
+                            <td>
+                                <a href="{{ url_for('delete_log', log_id=log.id) }}" class="btn btn-sm text-danger"
+                                    onclick="return confirm('¿Eliminar registro?')">Eliminar</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">No has registrado ninguna comida
+                                todavía.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 text-primary text-uppercase small">Gestión Nutricional</h6>
+                <div class="d-grid gap-2">
+                    <a href="/mis_alimentos" class="btn btn-outline-primary shadow-sm">Ver mi catálogo</a>
+                    <a href="/add_food" class="btn btn-outline-primary shadow-sm">Añadir nuevo alimento</a>
+                    <a href="/add_recipe" class="btn btn-outline-primary shadow-sm">Crear una receta</a>
+                    <hr class="text-muted">
+                    <a href="/perfil" class="btn btn-outline-secondary btn-sm">Ajustar mis objetivos diarios</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

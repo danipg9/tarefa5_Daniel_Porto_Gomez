@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white py-3">
+                <h4 class="mb-0 text-center">Registrar Consumo Diario</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">¿Qué has consumido?</label>
+                        <select name="item_id" class="form-select" required>
+                            <option value="" selected disabled>Selecciona del catálogo o tus recetas...</option>
+                            
+                            <optgroup label="Alimentos Individuales">
+                                {% for f in alimentos %}
+                                    <option value="food_{{ f.id }}">{{ f.name }} ({{ f.kcal_100g }} kcal/100g)</option>
+                                {% endfor %}
+                            </optgroup>
+
+                            <optgroup label="Mis Recetas / Combinaciones">
+                                {% for r in recetas %}
+                                    <option value="recipe_{{ r.id }}">{{ r.name }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                        <div class="form-text mt-2">
+                            ¿Falta algo? <a href="/add_food">Nuevo alimento</a> o <a href="/add_recipe">nueva receta</a>.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Cantidad consumida (gramos/ml)</label>
+                        <input type="number" name="grams" class="form-control" placeholder="Ej: 200" required>
+                        <small class="text-muted">Si es una receta, indica el peso de la ración que te has tomado.</small>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Guardar Registro</button>
+                        <a href="/" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
