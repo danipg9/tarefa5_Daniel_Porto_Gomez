@@ -17,6 +17,11 @@ class User(UserMixin, db.Model):
     target_carbs = db.Column(db.Integer, default=200)
     target_fat = db.Column(db.Integer, default=60)
 
+    # Relaciones
+    foods = db.relationship('Food', backref='owner', lazy=True)
+    recipes = db.relationship('Recipe', backref='owner', lazy=True)
+    logs = db.relationship('DailyLog', backref='owner', lazy=True)
+
 class Food(db.Model):
     """Alimentos base del catálogo."""
     id = db.Column(db.Integer, primary_key=True)
@@ -25,27 +30,34 @@ class Food(db.Model):
     prot_100g = db.Column(db.Float, nullable=False)
     carb_100g = db.Column(db.Float, nullable=False)
     fat_100g = db.Column(db.Float, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Relaciones para proteger la integridad (No permiten borrar si existen hijos)
+    recipe_usages = db.relationship('RecipeIngredient', backref='food', lazy=True)
+    log_usages = db.relationship('DailyLog', backref='food', lazy=True)
 
 class Recipe(db.Model):
     """Combinaciones de alimentos (ej: Batido de volumen)."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Si se borra una receta, se borran sus ingredientes automáticamente (cascade)
     ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
+    log_usages = db.relationship('DailyLog', backref='recipe', lazy=True)
 
 class RecipeIngredient(db.Model):
     """Relación alimento-receta con su peso específico."""
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
-    food_id = db.Column(db.Integer, db.ForeignKey('food.id'))
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    # Importante: food_id es ForeignKey y nullable=False para integridad
+    food_id = db.Column(db.Integer, db.ForeignKey('food.id'), nullable=False)
     grams = db.Column(db.Float, nullable=False)
-    food = db.relationship('Food')
 
 class DailyLog(db.Model):
     """Registro histórico de consumo y objetivos."""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     
     food_id = db.Column(db.Integer, db.ForeignKey('food.id'), nullable=True)
@@ -66,6 +78,3 @@ class DailyLog(db.Model):
         elif self.recipe:
             return calcular_macros_receta(self.grams, self.recipe)
         return {"kcal": 0, "proteinas": 0, "carbohidratos": 0, "grasas": 0}
-    
-    food = db.relationship('Food')
-    recipe = db.relationship('Recipe')

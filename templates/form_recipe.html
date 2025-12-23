@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header {% if receta %}bg-primary{% else %}bg-info{% endif %} text-white py-3 text-center">
+                <h4 class="mb-0">
+                    {% if receta %} Editar Receta: {{ receta.name }} {% else %} Crear Nueva Receta {% endif %}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" id="recipe-form">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Nombre de la Receta</label>
+                        <input type="text" name="name" class="form-control" value="{{ receta.name if receta else '' }}"
+                            placeholder="Ej: Batido Post-Entreno" required>
+                    </div>
+
+                    <h6 class="fw-bold mb-3">Ingredientes de la receta</h6>
+                    <div id="ingredients-container">
+                        {% if receta %}
+                        {% for ing_actual in receta.ingredients %}
+                        <div class="row g-2 mb-2 ingredient-row align-items-center">
+                            <div class="col-md-7">
+                                <select name="food_ids[]" class="form-select" required>
+                                    {% for f in alimentos %}
+                                    <option value="{{ f.id }}" {% if f.id==ing_actual.food_id %}selected{% endif %}>
+                                        {{ f.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" step="0.01" name="grams[]" class="form-control"
+                                    value="{{ ing_actual.grams }}" placeholder="Gramos" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-ing">
+                                    <i class="bi bi-trash"></i> Quitar
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="row g-2 mb-2 ingredient-row align-items-center">
+                            <div class="col-md-7">
+                                <select name="food_ids[]" class="form-select" required>
+                                    <option value="" disabled selected>Selecciona alimento...</option>
+                                    {% for f in alimentos %}
+                                    <option value="{{ f.id }}">{{ f.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" step="0.01" name="grams[]" class="form-control"
+                                    placeholder="Gramos" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-ing">
+                                    <i class="bi bi-trash"></i> Quitar
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-ingredient">
+                        <i class="bi bi-plus-circle"></i> Añadir otro ingrediente
+                    </button>
+
+                    <div class="d-grid gap-2 mt-5">
+                        <button type="submit"
+                            class="btn {% if receta %}btn-primary{% else %}btn-info text-white{% endif %} fw-bold shadow-sm">
+                            {% if receta %} Guardar Cambios {% else %} Guardar Receta {% endif %}
+                        </button>
+                        <a href="/mis_alimentos" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Añadir nueva fila
+    document.getElementById('add-ingredient').addEventListener('click', function () {
+        const container = document.getElementById('ingredients-container');
+        const rows = document.querySelectorAll('.ingredient-row');
+        // Clonamos la primera fila para mantener la estructura del select
+        const newRow = rows[0].cloneNode(true);
+
+        // Limpiar los valores de la nueva fila clonada
+        newRow.querySelectorAll('input').forEach(input => input.value = '');
+        newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+
+        container.appendChild(newRow);
+    });
+
+    // Eliminar fila (delegación de eventos para que funcione en filas nuevas)
+    document.getElementById('ingredients-container').addEventListener('click', function (e) {
+        // Buscamos si el clic fue en el botón o dentro del botón (el icono)
+        const deleteBtn = e.target.closest('.remove-ing');
+        
+        if (deleteBtn) {
+            const rows = document.querySelectorAll('.ingredient-row');
+            if (rows.length > 1) {
+                deleteBtn.closest('.ingredient-row').remove();
+            } else {
+                alert("Una receta debe tener al menos un ingrediente.");
+            }
+        }
+    });
+</script>
+{% endblock %}

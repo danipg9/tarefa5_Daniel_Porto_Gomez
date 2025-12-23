@@ -3,10 +3,34 @@
 <div class="row justify-content-center mt-4">
     <div class="col-md-10">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold text-dark">Mi Catálogo Nutricional</h2>
-            <div class="btn-group">
+            <div>
+                <h2 class="fw-bold text-dark mb-0">Mi Catálogo Nutricional</h2>
+                <p class="text-muted small">Gestiona tus ingredientes base y recetas personalizadas</p>
+            </div>
+            <div class="btn-group shadow-sm">
                 <a href="/add_food" class="btn btn-outline-primary">Añadir Alimento</a>
                 <a href="/add_recipe" class="btn btn-primary">Crear Receta</a>
+            </div>
+        </div>
+
+        <div class="row mb-3 g-2">
+            <div class="col-md-8">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white border-end-0 text-muted">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0" 
+                           placeholder="Buscar alimento o receta...">
+                </div>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <a href="{{ url_for('cargar_basicos') }}" class="btn btn-sm btn-light border text-primary shadow-sm w-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-cloud-download me-1"></i> Básicos
+                </a>
+                <a href="{{ url_for('limpiar_catalogo') }}" class="btn btn-sm btn-light border text-danger shadow-sm w-100 d-flex align-items-center justify-content-center" 
+                   onclick="return confirm('¿Vaciar catálogo?')">
+                    <i class="bi bi-trash me-1"></i> Limpiar
+                </a>
             </div>
         </div>
 
@@ -23,7 +47,7 @@
 
         <div class="tab-content card shadow-sm border-0 p-3" id="catalogoTabsContent">
             <div class="tab-pane fade show active" id="alimentos" role="tabpanel">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="tableAlimentos">
                     <thead class="table-light">
                         <tr>
                             <th>Nombre</th>
@@ -36,18 +60,15 @@
                     </thead>
                     <tbody>
                         {% for f in alimentos %}
-                        <tr>
-                            <td class="fw-bold">{{ f.name }}</td>
-                            <td>{{ f.kcal_100g }}</td>
-                            <td>{{ f.prot_100g }}g</td>
-                            <td>{{ f.carb_100g }}g</td>
-                            <td>{{ f.fat_100g }}g</td>
+                        <tr class="food-item">
+                            <td class="fw-bold text-secondary food-name">{{ f.name }}</td>
+                            <td>{{ "%.2f"|format(f.kcal_100g) }}</td>
+                            <td>{{ "%.2f"|format(f.prot_100g) }}g</td>
+                            <td>{{ "%.2f"|format(f.carb_100g) }}g</td>
+                            <td>{{ "%.2f"|format(f.fat_100g) }}g</td>
                             <td class="text-end">
-                                <a href="{{ url_for('edit_food', food_id=f.id) }}"
-                                    class="btn btn-sm btn-link text-primary">Editar</a>
-                                <a href="{{ url_for('delete_food', food_id=f.id) }}"
-                                    class="btn btn-sm btn-link text-danger"
-                                    onclick="return confirm('¿Eliminar alimento?')">Borrar</a>
+                                <a href="{{ url_for('edit_food', food_id=f.id) }}" class="btn btn-sm btn-link text-primary text-decoration-none p-0 me-2">Editar</a>
+                                <a href="{{ url_for('delete_food', food_id=f.id) }}" class="btn btn-sm btn-link text-danger text-decoration-none p-0" onclick="return confirm('¿Borrar?')">Borrar</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -58,46 +79,30 @@
             <div class="tab-pane fade" id="recetas" role="tabpanel">
                 <div class="accordion accordion-flush" id="accordionRecetas">
                     {% for r in recetas %}
-                    <div class="accordion-item border-bottom">
-                        <h2 class="accordion-header" id="heading{{ r.id }}">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapse{{ r.id }}">
-                                <div class="d-flex justify-content-between w-100 align-items-center">
-                                    <div>
-                                        <span class="fw-bold text-primary">{{ r.name }}</span>
-                                        <span class="badge bg-light text-dark border ms-2">{{ r.ingredients|length }}
-                                            ingredientes</span>
-                                    </div>
-                                </div>
+                    <div class="accordion-item border-bottom recipe-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ r.id }}">
+                                <span class="fw-bold text-primary recipe-name">{{ r.name }}</span>
+                                <span class="badge bg-light text-dark border ms-2">{{ r.ingredients|length }} ing.</span>
                             </button>
                         </h2>
-                        <div id="collapse{{ r.id }}" class="accordion-collapse collapse"
-                            data-bs-parent="#accordionRecetas">
+                        <div id="collapse{{ r.id }}" class="accordion-collapse collapse" data-bs-parent="#accordionRecetas">
                             <div class="accordion-body bg-light">
                                 <ul class="list-group list-group-flush shadow-sm rounded">
                                     {% for ing in r.ingredients %}
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         {{ ing.food.name }}
-                                        <span class="badge bg-secondary rounded-pill">{{ ing.grams }} g</span>
+                                        <span class="badge bg-secondary rounded-pill">{{ "%.2f"|format(ing.grams) }} g</span>
                                     </li>
                                     {% endfor %}
                                 </ul>
                                 <div class="mt-3 d-flex gap-2 justify-content-end">
-                                    <a href="{{ url_for('edit_recipe', recipe_id=r.id) }}"
-                                        class="btn btn-sm btn-outline-primary">
-                                        Modificar receta
-                                    </a>
-                                    <a href="{{ url_for('delete_recipe', recipe_id=r.id) }}"
-                                        class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('¿Borrar esta receta?')">
-                                        Eliminar
-                                    </a>
+                                    <a href="{{ url_for('edit_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-primary">Modificar</a>
+                                    <a href="{{ url_for('delete_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Borrar?')">Eliminar</a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-5 text-muted">Aún no has creado ninguna receta.</div>
                     {% endfor %}
                 </div>
             </div>
@@ -108,4 +113,24 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    
+    // Filtrar Alimentos
+    let foods = document.querySelectorAll('.food-item');
+    foods.forEach(food => {
+        let name = food.querySelector('.food-name').textContent.toLowerCase();
+        food.style.display = name.includes(filter) ? '' : 'none';
+    });
+
+    // Filtrar Recetas
+    let recipes = document.querySelectorAll('.recipe-item');
+    recipes.forEach(recipe => {
+        let name = recipe.querySelector('.recipe-name').textContent.toLowerCase();
+        recipe.style.display = name.includes(filter) ? '' : 'none';
+    });
+});
+</script>
 {% endblock %}

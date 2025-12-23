@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
 <div class="row justify-content-center mt-5">
     <div class="col-md-6">
         <div class="card shadow-sm border-0">
@@ -7,15 +9,24 @@
                 <h4 class="mb-0 text-center">Registrar Consumo Diario</h4>
             </div>
             <div class="card-body p-4">
+                <div class="alert alert-info border-0 shadow-sm mb-4 d-flex align-items-center">
+                    <i class="bi bi-calendar-check me-2 fs-4"></i>
+                    <div>
+                        Registrando para el día: <strong>{{ selected_date }}</strong>
+                    </div>
+                </div>
+
                 <form method="POST">
+                    <input type="hidden" name="date" value="{{ selected_date }}">
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">¿Qué has consumido?</label>
-                        <select name="item_id" class="form-select" required>
-                            <option value="" selected disabled>Selecciona del catálogo o tus recetas...</option>
+                        <select id="select-item" name="item_id" class="form-select shadow-sm" required>
+                            <option value="" selected disabled>Escribe para buscar...</option>
                             
                             <optgroup label="Alimentos Individuales">
                                 {% for f in alimentos %}
-                                    <option value="food_{{ f.id }}">{{ f.name }} ({{ f.kcal_100g }} kcal/100g)</option>
+                                    <option value="food_{{ f.id }}">{{ f.name }} ({{ "%.2f"|format(f.kcal_100g) }} kcal/100g)</option>
                                 {% endfor %}
                             </optgroup>
 
@@ -26,23 +37,46 @@
                             </optgroup>
                         </select>
                         <div class="form-text mt-2">
-                            ¿Falta algo? <a href="/add_food">Nuevo alimento</a> o <a href="/add_recipe">nueva receta</a>.
+                            ¿No está? <a href="/add_food" class="text-decoration-none">Crea un alimento</a> o <a href="/cargar_basicos" class="text-decoration-none">carga básicos</a>.
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-bold">Cantidad consumida (gramos/ml)</label>
-                        <input type="number" name="grams" class="form-control" placeholder="Ej: 200" required>
-                        <small class="text-muted">Si es una receta, indica el peso de la ración que te has tomado.</small>
+                        <label class="form-label fw-bold">Cantidad consumida (gramos)</label>
+                        <input type="number" name="grams" class="form-control shadow-sm" placeholder="Ej: 200" required min="1" step="0.01">
+                        <small class="text-muted">Indica el peso de la ración ingerida.</small>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success">Guardar Registro</button>
-                        <a href="/" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success shadow-sm py-2 fw-bold">Guardar Registro</button>
+                        <a href="{{ url_for('index', date_str=selected_date) }}" class="btn btn-outline-secondary shadow-sm">Cancelar</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    // Inicializamos el buscador en el select
+    new TomSelect("#select-item",{
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        },
+        placeholder: "Escribe para buscar alimento o receta...",
+        allowEmptyOption: false,
+    });
+</script>
+
+<style>
+    /* Ajuste para que el buscador pegue con el estilo de nuestra app */
+    .ts-control {
+        border-radius: 0.375rem !important;
+        padding: 0.5rem 0.75rem !important;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+    }
+</style>
 {% endblock %}
