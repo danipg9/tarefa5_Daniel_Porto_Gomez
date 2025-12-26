@@ -219,6 +219,50 @@ def add_food():
         return redirect(url_for("mis_alimentos"))
     return render_template("form_food.html", alimento=None)
 
+@app.route("/edit_food/<int:food_id>", methods=["GET", "POST"])
+@login_required
+def edit_food(food_id):
+    """
+    Permite modificar los valores de un alimento existente.
+    Verifica que el alimento pertenezca al usuario activo antes de editar.
+    """
+    f = Food.query.get_or_404(food_id)
+    
+    # Seguridad: si el alimento no es del usuario, redirigimos
+    if f.user_id != current_user.id: 
+        return redirect(url_for('mis_alimentos'))
+        
+    if request.method == "POST":
+        f.name = request.form.get("name")
+        f.kcal_100g = float(request.form.get("kcal"))
+        f.prot_100g = float(request.form.get("prot"))
+        f.carb_100g = float(request.form.get("carb"))
+        f.fat_100g = float(request.form.get("fat"))
+        
+        db.session.commit()
+        flash("Alimento actualizado correctamente.", "success")
+        return redirect(url_for('mis_alimentos'))
+        
+    return render_template("form_food.html", alimento=f)
+
+@app.route("/delete_food/<int:food_id>")
+@login_required
+def delete_food(food_id):
+    """
+    Elimina un alimento del catálogo.
+    Controla el error si el alimento está referenciado en una receta (Integridad).
+    """
+    f = Food.query.get_or_404(food_id)
+    if f.user_id == current_user.id:
+        try:
+            db.session.delete(f)
+            db.session.commit()
+            flash("Alimento eliminado.", "info")
+        except Exception:
+            db.session.rollback()
+            flash("No se puede eliminar: el alimento está en uso en alguna receta.", "danger")
+    return redirect(url_for('mis_alimentos'))
+
 @app.route("/add_recipe", methods=["GET", "POST"])
 @login_required
 def add_recipe():
@@ -238,6 +282,50 @@ def add_recipe():
         return redirect(url_for("mis_alimentos"))
     alimentos = Food.query.filter_by(user_id=current_user.id).order_by(Food.name).all()
     return render_template("form_recipe.html", receta=None, alimentos=alimentos)
+
+@app.route("/edit_recipe/<int:recipe_id>", methods=["GET", "POST"])
+@login_required
+def edit_recipe(recipe_id):
+    """
+    Permite modificar una receta y sus ingredientes.
+    Elimina los ingredientes anteriores y registra los nuevos para simplificar la actualización.
+    """
+    r = Recipe.query.get_or_404(recipe_id)
+    if r.user_id != current_user.id: 
+        return redirect(url_for('mis_alimentos'))
+        
+    if request.method == "POST":
+        r.name = request.form.get("name")
+        # Limpiamos ingredientes actuales para evitar duplicados o conflictos
+        RecipeIngredient.query.filter_by(recipe_id=r.id).delete()
+        
+        f_ids = request.form.getlist("food_ids[]")
+        grams = request.form.getlist("grams[]")
+        
+        for fid, g in zip(f_ids, grams):
+            if fid and g:
+                db.session.add(RecipeIngredient(recipe_id=r.id, food_id=int(fid), grams=float(g)))
+        
+        db.session.commit()
+        flash("Receta actualizada con éxito.", "success")
+        return redirect(url_for('mis_alimentos'))
+        
+    alimentos = Food.query.filter_by(user_id=current_user.id).all()
+    return render_template("form_recipe.html", receta=r, alimentos=alimentos)
+
+@app.route("/delete_recipe/<int:recipe_id>")
+@login_required
+def delete_recipe(recipe_id):
+    """
+    Elimina una receta del catálogo. 
+    Las relaciones en RecipeIngredient se borran en cascada según el modelo.
+    """
+    r = Recipe.query.get_or_404(recipe_id)
+    if r.user_id == current_user.id:
+        db.session.delete(r)
+        db.session.commit()
+        flash("Receta eliminada correctamente.", "info")
+    return redirect(url_for('mis_alimentos'))
 
 # --- CARGA DE DATOS Y LIMPIEZA ---
 
@@ -315,6 +403,22 @@ def add_log():
     alimentos = Food.query.filter_by(user_id=current_user.id).all()
     recetas = Recipe.query.filter_by(user_id=current_user.id).all()
     return render_template("add_log.html", alimentos=alimentos, recetas=recetas, selected_date=date_str)
+
+@app.route("/delete_log/<int:log_id>")
+@login_required
+def delete_log(log_id):
+    """
+    Elimina un registro de consumo del diario.
+    Retorna al usuario a la misma fecha en la que estaba visualizando el diario.
+    """
+    log = DailyLog.query.get_or_404(log_id)
+    if log.user_id == current_user.id:
+        f_ret = log.date.strftime("%Y-%m-%d")
+        db.session.delete(log)
+        db.session.commit()
+        flash("Registro eliminado del diario.", "info")
+        return redirect(url_for('index', date_str=f_ret))
+    return redirect(url_for('root'))
 
 # Inicia la base de datos dentro del contexto de la aplicación
 with app.app_context():
