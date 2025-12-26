@@ -28,7 +28,7 @@
                     <i class="bi bi-cloud-download me-1"></i> Básicos
                 </a>
                 <a href="{{ url_for('limpiar_catalogo') }}" class="btn btn-sm btn-light border text-danger shadow-sm w-100 d-flex align-items-center justify-content-center" 
-                   onclick="return confirm('¿Vaciar catálogo?')">
+                    onclick="return confirm('¿Vaciar catálogo?')">
                     <i class="bi bi-trash me-1"></i> Limpiar
                 </a>
             </div>
@@ -115,17 +115,21 @@
 </div>
 
 <script>
+/**
+ * Lógica de filtrado en tiempo real. 
+ * Escucha el teclado y oculta las filas o acordeones que no coincidan con la búsqueda.
+ */
 document.getElementById('searchInput').addEventListener('keyup', function() {
     let filter = this.value.toLowerCase();
     
-    // Filtrar Alimentos
+    // Filtro para la pestaña de alimentos base
     let foods = document.querySelectorAll('.food-item');
     foods.forEach(food => {
         let name = food.querySelector('.food-name').textContent.toLowerCase();
         food.style.display = name.includes(filter) ? '' : 'none';
     });
 
-    // Filtrar Recetas
+    // Filtro para la pestaña de recetas personalizadas
     let recipes = document.querySelectorAll('.recipe-item');
     recipes.forEach(recipe => {
         let name = recipe.querySelector('.recipe-name').textContent.toLowerCase();

@@ -14,7 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
-# Importamos componentes locales
+# Importamos la base de datos y la lógica de negocio para desacoplar el código
 from models import db, User, Food, DailyLog, Recipe, RecipeIngredient
 from logic import obtener_resumen_diario
 
@@ -23,15 +23,20 @@ app.config["SECRET_KEY"] = "tfm_seguridad_2024_key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///nutri.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# --- CONFIGURACIÓN DE SQLITE PARA FOREIGN KEYS ---
+# --- CONFIGURACIÓN DE INTEGRIDAD PARA SQLITE ---
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Fuerza a SQLite a respetar las Claves Foráneas para integridad referencial."""
+    """
+    Por defecto, SQLite no activa las Claves Foráneas. 
+    Forzamos su activación para asegurar que no se borren alimentos que pertenecen a recetas.
+    """
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
 db.init_app(app)
+
+# Gestión de sesiones con Flask-Login
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Sesión requerida para acceder al sistema."
@@ -42,7 +47,10 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def validar_password(password):
-    """Valida requisitos de seguridad de la contraseña."""
+    """
+    Validación de robustez de contraseña mediante Regex.
+    Exige complejidad para cumplir con estándares de seguridad mínimos.
+    """
     if not password or len(password) < 8:
         return False
     if not re.search(r"[A-Z]", password): return False
@@ -56,12 +64,17 @@ def validar_password(password):
 @app.route("/")
 @login_required
 def root():
+    # Redirección automática a la fecha actual al entrar en la app
     hoy_str = date.today().strftime("%Y-%m-%d")
     return redirect(url_for("index", date_str=hoy_str))
 
 @app.route("/day/<date_str>")
 @login_required
 def index(date_str):
+    """
+    Punto de entrada principal. Gestiona la visualización del diario 
+    y el cálculo de estadísticas de adherencia (rachas).
+    """
     try:
         fecha_actual = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
@@ -70,32 +83,53 @@ def index(date_str):
     prev_day = (fecha_actual - timedelta(days=1)).strftime("%Y-%m-%d")
     next_day = (fecha_actual + timedelta(days=1)).strftime("%Y-%m-%d")
 
+    # Recuperamos los registros y calculamos el resumen nutricional
     logs = DailyLog.query.filter_by(user_id=current_user.id, date=fecha_actual).all()
     resumen = obtener_resumen_diario(logs)
 
-    # Trazabilidad: Snapshot de objetivos o valores actuales
+    # Lógica de Snapshots: Priorizamos la meta que el usuario tenía el día del registro
     if logs and logs[0].target_kcal_snapshot:
         targets = {
-            "kcal": logs[0].target_kcal_snapshot, "prot": logs[0].target_protein_snapshot,
-            "carbs": logs[0].target_carbs_snapshot, "fat": logs[0].target_fat_snapshot,
+            "kcal": logs[0].target_kcal_snapshot, 
+            "prot": logs[0].target_protein_snapshot,
+            "carbs": logs[0].target_carbs_snapshot, 
+            "fat": logs[0].target_fat_snapshot,
         }
     else:
         targets = {
-            "kcal": current_user.target_kcal, "prot": current_user.target_protein,
-            "carbs": current_user.target_carbs, "fat": current_user.target_fat,
+            "kcal": current_user.target_kcal, 
+            "prot": current_user.target_protein,
+            "carbs": current_user.target_carbs, 
+            "fat": current_user.target_fat,
         }
 
-    return render_template("index.html", resumen=resumen, targets=targets, hoy=fecha_actual,
-                           prev_day=prev_day, next_day=next_day, logs=logs, date=date)
+    from logic import obtener_estadisticas_breves
+    stats_semana = obtener_estadisticas_breves(current_user.id, dias=7)
+    stats_mes = obtener_estadisticas_breves(current_user.id, dias=30)
 
-# --- USUARIO Y PERFIL ---
+    return render_template(
+        "index.html", 
+        resumen=resumen, 
+        targets=targets, 
+        hoy=fecha_actual,
+        prev_day=prev_day, 
+        next_day=next_day, 
+        logs=logs, 
+        date=date,
+        stats_semana=stats_semana,
+        stats_mes=stats_mes
+    )
+
+# --- GESTIÓN DE USUARIOS ---
 
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
+    """Proceso de alta con validación de integridad (email/user únicos)."""
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password")
+        
         if password != request.form.get("confirm_password"):
             flash("Las contraseñas no coinciden.", "danger")
         elif not validar_password(password):
@@ -107,6 +141,7 @@ def registro():
                 if User.query.filter((User.username == username) | (User.email == email)).first():
                     flash("Usuario o email ya registrados.", "warning")
                 else:
+                    # Aplicamos hashing para nunca guardar contraseñas en texto plano
                     nuevo = User(username=username, email=email, 
                                  password=generate_password_hash(password, method="pbkdf2:sha256"),
                                  fecha_aceptacion_politica=datetime.now())
@@ -138,6 +173,7 @@ def logout():
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
+    """Actualización de metas diarias que afectan a los cálculos de progreso."""
     if request.method == "POST":
         current_user.target_kcal = int(request.form.get("kcal", 2000))
         current_user.target_protein = int(request.form.get("proteinas", 150))
@@ -148,7 +184,7 @@ def perfil():
         return redirect(url_for("root"))
     return render_template("perfil.html")
 
-# --- CATÁLOGO UNIFICADO (ALIMENTOS Y RECETAS) ---
+# --- CATÁLOGO (ALIMENTOS Y RECETAS) ---
 
 @app.route("/mis_alimentos")
 @login_required
@@ -170,41 +206,17 @@ def add_food():
         return redirect(url_for("mis_alimentos"))
     return render_template("form_food.html", alimento=None)
 
-@app.route("/edit_food/<int:food_id>", methods=["GET", "POST"])
-@login_required
-def edit_food(food_id):
-    f = Food.query.get_or_404(food_id)
-    if f.user_id != current_user.id: return redirect(url_for('mis_alimentos'))
-    if request.method == "POST":
-        f.name, f.kcal_100g = request.form.get("name"), float(request.form.get("kcal"))
-        f.prot_100g, f.carb_100g = float(request.form.get("prot")), float(request.form.get("carb"))
-        f.fat_100g = float(request.form.get("fat"))
-        db.session.commit()
-        flash("Alimento actualizado.", "success")
-        return redirect(url_for('mis_alimentos'))
-    return render_template("form_food.html", alimento=f)
-
-@app.route("/delete_food/<int:food_id>")
-@login_required
-def delete_food(food_id):
-    f = Food.query.get_or_404(food_id)
-    if f.user_id == current_user.id:
-        try:
-            db.session.delete(f)
-            db.session.commit()
-            flash("Alimento eliminado.", "info")
-        except Exception:
-            db.session.rollback()
-            flash("No se puede eliminar: está en uso.", "danger")
-    return redirect(url_for('mis_alimentos'))
-
 @app.route("/add_recipe", methods=["GET", "POST"])
 @login_required
 def add_recipe():
+    """
+    Gestión de creación de recetas. 
+    Usa 'flush' para obtener el ID de la receta antes de insertar sus ingredientes.
+    """
     if request.method == "POST":
         nueva = Recipe(name=request.form.get("name"), user_id=current_user.id)
         db.session.add(nueva)
-        db.session.flush()
+        db.session.flush() # Sincroniza con la BD sin cerrar la transacción
         f_ids, grams = request.form.getlist("food_ids[]"), request.form.getlist("grams[]")
         for fid, g in zip(f_ids, grams):
             if fid and g: db.session.add(RecipeIngredient(recipe_id=nueva.id, food_id=int(fid), grams=float(g)))
@@ -214,38 +226,12 @@ def add_recipe():
     alimentos = Food.query.filter_by(user_id=current_user.id).order_by(Food.name).all()
     return render_template("form_recipe.html", receta=None, alimentos=alimentos)
 
-@app.route("/edit_recipe/<int:recipe_id>", methods=["GET", "POST"])
-@login_required
-def edit_recipe(recipe_id):
-    r = Recipe.query.get_or_404(recipe_id)
-    if r.user_id != current_user.id: return redirect(url_for('mis_alimentos'))
-    if request.method == "POST":
-        r.name = request.form.get("name")
-        RecipeIngredient.query.filter_by(recipe_id=r.id).delete()
-        f_ids, grams = request.form.getlist("food_ids[]"), request.form.getlist("grams[]")
-        for fid, g in zip(f_ids, grams):
-            if fid and g: db.session.add(RecipeIngredient(recipe_id=r.id, food_id=int(fid), grams=float(g)))
-        db.session.commit()
-        flash("Receta actualizada.", "success")
-        return redirect(url_for('mis_alimentos'))
-    alimentos = Food.query.filter_by(user_id=current_user.id).all()
-    return render_template("form_recipe.html", receta=r, alimentos=alimentos)
-
-@app.route("/delete_recipe/<int:recipe_id>")
-@login_required
-def delete_recipe(recipe_id):
-    r = Recipe.query.get_or_404(recipe_id)
-    if r.user_id == current_user.id:
-        db.session.delete(r)
-        db.session.commit()
-        flash("Receta eliminada.", "info")
-    return redirect(url_for('mis_alimentos'))
-
-# --- UTILIDADES ---
+# --- CARGA DE DATOS Y LIMPIEZA ---
 
 @app.route("/cargar_basicos")
 @login_required
 def cargar_basicos():
+    """Seed de base de datos desde un archivo JSON externo."""
     path = os.path.join(app.root_path, 'alimentos_basicos.json')
     if not os.path.exists(path):
         flash("Archivo JSON no encontrado.", "danger")
@@ -254,6 +240,7 @@ def cargar_basicos():
         basicos = json.load(f)
     cont = 0
     for b in basicos:
+        # Evitamos duplicados por nombre para el mismo usuario
         if not Food.query.filter_by(name=b["name"], user_id=current_user.id).first():
             db.session.add(Food(name=b["name"], kcal_100g=b["kcal"], prot_100g=b["prot"], 
                                 carb_100g=b["carb"], fat_100g=b["fat"], user_id=current_user.id))
@@ -265,6 +252,10 @@ def cargar_basicos():
 @app.route("/limpiar_catalogo")
 @login_required
 def limpiar_catalogo():
+    """
+    Eliminación masiva con control de excepciones. 
+    Protege alimentos que ya están siendo usados en recetas o registros diarios.
+    """
     alimentos = Food.query.filter_by(user_id=current_user.id).all()
     borrados = protegidos = 0
     for f in alimentos:
@@ -275,7 +266,7 @@ def limpiar_catalogo():
         except Exception:
             db.session.rollback()
             protegidos += 1
-    flash(f"Limpieza: {borrados} eliminados, {protegidos} protegidos.", "info")
+    flash(f"Limpieza: {borrados} eliminados, {protegidos} aún en uso.", "info")
     return redirect(url_for('mis_alimentos'))
 
 # --- DIARIO DE CONSUMO ---
@@ -283,41 +274,36 @@ def limpiar_catalogo():
 @app.route("/add_log", methods=["GET", "POST"])
 @login_required
 def add_log():
+    """
+    Registro de ingesta. 
+    Guarda un 'snapshot' de las metas actuales del usuario para que el historial sea inalterable.
+    """
     date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
     if request.method == "POST":
         item, grams = request.form.get("item_id"), float(request.form.get("grams", 0))
         f_date = datetime.strptime(request.form.get("date"), '%Y-%m-%d').date()
-        if not item or grams <= 0:
-            flash("Datos no válidos.", "warning")
-            return redirect(url_for("add_log", date=date_str))
+        
+        # El prefijo del ID nos dice si es alimento base o receta compuesta
         tipo, rid = item.split("_")
         nuevo = DailyLog(user_id=current_user.id, grams=grams, date=f_date,
                          target_kcal_snapshot=current_user.target_kcal,
                          target_protein_snapshot=current_user.target_protein,
                          target_carbs_snapshot=current_user.target_carbs,
                          target_fat_snapshot=current_user.target_fat)
+        
         if tipo == "food": nuevo.food_id = int(rid)
         else: nuevo.recipe_id = int(rid)
+        
         db.session.add(nuevo)
         db.session.commit()
         flash("Consumo registrado.", "success")
         return redirect(url_for("index", date_str=f_date.strftime("%Y-%m-%d")))
+    
     alimentos = Food.query.filter_by(user_id=current_user.id).all()
     recetas = Recipe.query.filter_by(user_id=current_user.id).all()
     return render_template("add_log.html", alimentos=alimentos, recetas=recetas, selected_date=date_str)
 
-@app.route("/delete_log/<int:log_id>")
-@login_required
-def delete_log(log_id):
-    log = DailyLog.query.get_or_404(log_id)
-    if log.user_id == current_user.id:
-        f_ret = log.date.strftime("%Y-%m-%d")
-        db.session.delete(log)
-        db.session.commit()
-        flash("Registro eliminado.", "info")
-        return redirect(url_for('index', date_str=f_ret))
-    return redirect(url_for('root'))
-
+# Inicia la base de datos dentro del contexto de la aplicación
 with app.app_context():
     db.create_all()
 

@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-2">
+        <div class="card bg-white border-0 shadow-sm" style="border-left: 4px solid #0d6efd !important;">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-bold text-uppercase" style="font-size: 0.65rem;">Últimos 7 días</small>
+                        <p class="mb-0"><strong>{{ stats_semana.cumplidos }}</strong> días en objetivo</p>
+                    </div>
+                    <i class="bi bi-calendar-week text-primary fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-2">
+        <div class="card bg-white border-0 shadow-sm" style="border-left: 4px solid #198754 !important;">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-bold text-uppercase" style="font-size: 0.65rem;">Últimos 30 días</small>
+                        <p class="mb-0"><strong>{{ stats_mes.cumplidos }}</strong> días en objetivo</p>
+                    </div>
+                    <i class="bi bi-calendar-month text-success fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row mb-4">
     <div class="col-md-12 text-center">
         <div class="d-flex justify-content-center align-items-center gap-3">
@@ -9,7 +39,7 @@
                 {% if hoy == date.today() %}
                     Resumen de hoy
                 {% else %}
-                    {# Formato: 23 de diciembre de 2025 #}
+                    {# Renderizado manual de fecha en castellano para evitar dependencias de locale en el servidor #}
                     Resumen del {{ hoy.day }} de 
                     {% set meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
                     {{ meses[hoy.month - 1] }} de {{ hoy.year }}
@@ -42,7 +72,7 @@
                 <div class="progress mt-2" style="height: 10px; border-radius: 5px;">
                     {% set porcentaje = (actual * 100 / objetivo) if objetivo > 0 else 0 %}
                     
-                    {# Lógica de colores semafórica #}
+                    {# Sistema de colores semafórico: indica visualmente si el usuario se acerca o se pasa del objetivo #}
                     {% if porcentaje < 50 %}
                         {% set color_clase = "bg-danger" %}
                     {% elif porcentaje < 100 %}
@@ -93,6 +123,7 @@
                         </thead>
                         <tbody>
                             {% for log in logs %}
+                            {# Obtenemos los macros calculados en tiempo real según el gramaje del registro #}
                             {% set m = log.get_macros() %}
                             <tr>
                                 <td class="ps-3 fw-bold text-primary">{{ log.food.name if log.food else log.recipe.name }}</td>

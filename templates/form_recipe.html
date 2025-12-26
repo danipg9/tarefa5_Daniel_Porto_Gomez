@@ -82,27 +82,32 @@
 </div>
 
 <script>
-    // Añadir nueva fila
+    /**
+     * Gestión dinámica del DOM para ingredientes.
+     * Clonamos la estructura de la primera fila y limpiamos sus valores para asegurar consistencia visual.
+     */
     document.getElementById('add-ingredient').addEventListener('click', function () {
         const container = document.getElementById('ingredients-container');
         const rows = document.querySelectorAll('.ingredient-row');
-        // Clonamos la primera fila para mantener la estructura del select
         const newRow = rows[0].cloneNode(true);
 
-        // Limpiar los valores de la nueva fila clonada
+        // Reset de los campos clonados para evitar duplicar datos del usuario
         newRow.querySelectorAll('input').forEach(input => input.value = '');
         newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
 
         container.appendChild(newRow);
     });
 
-    // Eliminar fila (delegación de eventos para que funcione en filas nuevas)
+    /**
+     * Delegación de eventos para la eliminación de ingredientes.
+     * Esto permite capturar clics incluso en filas añadidas dinámicamente tras la carga inicial.
+     */
     document.getElementById('ingredients-container').addEventListener('click', function (e) {
-        // Buscamos si el clic fue en el botón o dentro del botón (el icono)
         const deleteBtn = e.target.closest('.remove-ing');
         
         if (deleteBtn) {
             const rows = document.querySelectorAll('.ingredient-row');
+            // Mínimo de integridad: una receta no puede estar vacía
             if (rows.length > 1) {
                 deleteBtn.closest('.ingredient-row').remove();
             } else {

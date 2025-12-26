@@ -55,3 +55,36 @@ def obtener_resumen_diario(logs):
             
     # Retornamos los valores redondeados para una visualización limpia en el Dashboard
     return {k: round(v, 1) for k, v in resumen.items()}
+
+def obtener_estadisticas_breves(user_id, dias=7):
+    """Calcula cuántos días se ha cumplido el objetivo en un rango de tiempo."""
+    from datetime import date, timedelta
+    from models import DailyLog
+    
+    fecha_inicio = date.today() - timedelta(days=dias)
+    # Obtenemos todos los logs del periodo
+    logs = DailyLog.query.filter(DailyLog.user_id == user_id, DailyLog.date >= fecha_inicio).all()
+    
+    # Agrupamos por fecha para calcular totales diarios
+    datos_diarios = {}
+    for log in logs:
+        if log.date not in datos_diarios:
+            datos_diarios[log.date] = {
+                "kcal": 0, 
+                "objetivo": log.target_kcal_snapshot or 2000
+            }
+        
+        m = log.get_macros()
+        datos_diarios[log.date]["kcal"] += m["kcal"]
+
+    cumplidos = 0
+    # Un día es "éxito" si está cerca del objetivo (margen del 10%)
+    for dia, info in datos_diarios.items():
+        margen = info["objetivo"] * 0.1
+        if abs(info["kcal"] - info["objetivo"]) <= margen:
+            cumplidos += 1
+            
+    return {
+        "total_dias_con_datos": len(datos_diarios), 
+        "cumplidos": cumplidos
+    }

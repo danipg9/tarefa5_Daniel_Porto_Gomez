@@ -9,6 +9,7 @@
                 <h4 class="mb-0 text-center">Registrar Consumo Diario</h4>
             </div>
             <div class="card-body p-4">
+                
                 <div class="alert alert-info border-0 shadow-sm mb-4 d-flex align-items-center">
                     <i class="bi bi-calendar-check me-2 fs-4"></i>
                     <div>
@@ -44,7 +45,7 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold">Cantidad consumida (gramos)</label>
                         <input type="number" name="grams" class="form-control shadow-sm" placeholder="Ej: 200" required min="1" step="0.01">
-                        <small class="text-muted">Indica el peso de la ración ingerida.</small>
+                        <small class="text-muted">Indica el peso de la ración que te has comido.</small>
                     </div>
 
                     <div class="d-grid gap-2">
@@ -59,20 +60,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
-    // Inicializamos el buscador en el select
+    // Configuramos el buscador: queremos que ordene por nombre y que sea fluido
     new TomSelect("#select-item",{
         create: false,
         sortField: {
             field: "text",
             direction: "asc"
         },
-        placeholder: "Escribe para buscar alimento o receta...",
+        placeholder: "Escribe para buscar...",
         allowEmptyOption: false,
     });
 </script>
 
 <style>
-    /* Ajuste para que el buscador pegue con el estilo de nuestra app */
+    /* Retoques estéticos para que el buscador pegue con el resto de botones de Bootstrap */
     .ts-control {
         border-radius: 0.375rem !important;
         padding: 0.5rem 0.75rem !important;

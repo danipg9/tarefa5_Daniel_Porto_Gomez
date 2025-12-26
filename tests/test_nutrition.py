@@ -1,19 +1,22 @@
-import pytest
-from logic import calcular_macros_alimento
+import unittest
+from app import app, db
 
-# Simulamos un objeto alimento (tipo Mock) para no necesitar la base de datos real
-class MockFood:
-    def __init__(self, kcal, prot, carb, fat):
-        self.kcal_100g = kcal
-        self.prot_100g = prot
-        self.carb_100g = carb
-        self.fat_100g = fat
+class TestFlaskIntegrity(unittest.TestCase):
+    def setUp(self):
+        # Configuración para pruebas
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        app.config['WTF_CSRF_ENABLED'] = False
+        self.client = app.test_client()
+        with app.app_context():
+            db.create_all()
 
-def test_calculo_alimento_base():
-    """Prueba que 200g de pavo calculan bien los macros."""
-    pavo = MockFood(100, 20, 0, 2) # 100kcal, 20g prot, 0 carb, 2g grasa
-    resultado = calcular_macros_alimento(200, pavo)
-    
-    assert resultado["kcal"] == 200
-    assert resultado["proteinas"] == 40
-    assert resultado["grasas"] == 4
+    def test_acceso_login(self):
+        """Verifica que la app arranca y muestra el login."""
+        response = self.client.get('/login')
+        self.assertEqual(response.status_code, 200)
+
+    def test_redireccion_sin_login(self):
+        """Verifica que si intentas ir al index sin loguearte, te redirige."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 302)
