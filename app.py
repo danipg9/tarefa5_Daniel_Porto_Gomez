@@ -38,12 +38,14 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """
-    Por defecto, SQLite no activa las Claves Foráneas. 
-    Forzamos su activación para asegurar que no se borren alimentos que pertenecen a recetas.
+    Solo aplicamos PRAGMA si estamos en SQLite.
+    PostgreSQL gestiona las Claves Foráneas de forma nativa y automática.
     """
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    # Verificamos si la URL de la base de datos contiene 'sqlite'
+    if "sqlite" in app.config["SQLALCHEMY_DATABASE_URI"]:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 db.init_app(app)
 
