@@ -1,6 +1,7 @@
 venv/
-*.pyc
 __pycache__/
+*.pyc
 instance/
-.pytest_cache/
+nutri.db
 .coverage
+htmlcov/

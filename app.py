@@ -18,9 +18,20 @@ from sqlalchemy.engine import Engine
 from models import db, User, Food, DailyLog, Recipe, RecipeIngredient
 from logic import obtener_resumen_diario
 
+# --- CONFIGURACIÓN DE LA APLICACIÓN ---
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "tfm_seguridad_2024_key"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///nutri.db"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tfm_seguridad_2024_key")
+
+# DETECCIÓN DE ENTORNO: Si existe DATABASE_URL en el sistema, usamos Postgres (Nube)
+# Si no, usamos el SQLite local (Desarrollo)
+database_url = os.environ.get("DATABASE_URL")
+
+if database_url:
+    # Ajuste necesario: SQLAlchemy requiere 'postgresql://' pero Render suele dar 'postgres://'
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://", 1)
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///nutri.db"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # --- CONFIGURACIÓN DE INTEGRIDAD PARA SQLITE ---
@@ -308,4 +319,6 @@ with app.app_context():
     db.create_all()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # En local usaremos el puerto 5000, en la nube el que nos asigne el sistema
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
