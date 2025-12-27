@@ -46,6 +46,7 @@
         </ul>
 
         <div class="tab-content card shadow-sm border-0 p-3" id="catalogoTabsContent">
+            
             <div class="tab-pane fade show active" id="alimentos" role="tabpanel">
                 <table class="table table-hover align-middle" id="tableAlimentos">
                     <thead class="table-light">
@@ -79,26 +80,80 @@
             <div class="tab-pane fade" id="recetas" role="tabpanel">
                 <div class="accordion accordion-flush" id="accordionRecetas">
                     {% for r in recetas %}
+                    
+                    {# Pre-cálculo de totales para mostrar en la cabecera cerrada #}
+                    {% set t = {'k': 0, 'p': 0, 'c': 0, 'f': 0, 'g': 0} %}
+                    {% for ing in r.ingredients %}
+                        {% set ratio = ing.grams / 100 %}
+                        {% if t.update({
+                            'k': t.k + (ing.food.kcal_100g * ratio),
+                            'p': t.p + (ing.food.prot_100g * ratio),
+                            'c': t.c + (ing.food.carb_100g * ratio),
+                            'f': t.f + (ing.food.fat_100g * ratio),
+                            'g': t.g + ing.grams
+                        }) %} {% endif %}
+                    {% endfor %}
+
                     <div class="accordion-item border-bottom recipe-item">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ r.id }}">
-                                <span class="fw-bold text-primary recipe-name">{{ r.name }}</span>
-                                <span class="badge bg-light text-dark border ms-2">{{ r.ingredients|length }} ing.</span>
+                                <div class="d-flex flex-wrap align-items-center w-100 justify-content-between pe-3">
+                                    <div class="me-auto">
+                                        <span class="fw-bold text-primary recipe-name">{{ r.name }}</span>
+                                        <span class="badge bg-light text-dark border ms-2">{{ r.ingredients|length }} ing.</span>
+                                        <small class="text-muted ms-2">({{ "%.0f"|format(t.g) }}g totales)</small>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-3 text-center mt-2 mt-md-0" style="font-size: 0.85rem;">
+                                        <div class="px-2 border-end"><b class="text-dark">{{ "%.0f"|format(t.k) }}</b> <span class="text-muted small">kcal</span></div>
+                                        <div class="px-2 border-end"><b class="text-dark">{{ "%.1f"|format(t.p) }}</b> <span class="text-muted small">P</span></div>
+                                        <div class="px-2 border-end"><b class="text-dark">{{ "%.1f"|format(t.c) }}</b> <span class="text-muted small">C</span></div>
+                                        <div class="px-2"><b class="text-dark">{{ "%.1f"|format(t.f) }}</b> <span class="text-muted small">G</span></div>
+                                    </div>
+                                </div>
                             </button>
                         </h2>
+                        
                         <div id="collapse{{ r.id }}" class="accordion-collapse collapse" data-bs-parent="#accordionRecetas">
-                            <div class="accordion-body bg-light">
-                                <ul class="list-group list-group-flush shadow-sm rounded">
-                                    {% for ing in r.ingredients %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        {{ ing.food.name }}
-                                        <span class="badge bg-secondary rounded-pill">{{ "%.2f"|format(ing.grams) }} g</span>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                                <div class="mt-3 d-flex gap-2 justify-content-end">
-                                    <a href="{{ url_for('edit_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-primary">Modificar</a>
-                                    <a href="{{ url_for('delete_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Borrar?')">Eliminar</a>
+                            <div class="accordion-body bg-white p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-borderless mb-0 align-middle">
+                                        <thead class="table-light small text-muted text-uppercase text-center border-bottom">
+                                            <tr>
+                                                <th class="text-start ps-4">Ingrediente</th>
+                                                <th>Cantidad</th>
+                                                <th>Kcal</th>
+                                                <th>P</th>
+                                                <th>C</th>
+                                                <th>G</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ing in r.ingredients %}
+                                                {% set ratio = ing.grams / 100 %}
+                                                <tr class="small border-bottom text-center">
+                                                    <td class="text-start ps-4">{{ ing.food.name }}</td>
+                                                    <td class="fw-bold text-secondary">{{ "%.0f"|format(ing.grams) }}g</td>
+                                                    <td>{{ "%.1f"|format(ing.food.kcal_100g * ratio) }}</td>
+                                                    <td>{{ "%.1f"|format(ing.food.prot_100g * ratio) }}g</td>
+                                                    <td>{{ "%.1f"|format(ing.food.carb_100g * ratio) }}g</td>
+                                                    <td>{{ "%.1f"|format(ing.food.fat_100g * ratio) }}g</td>
+                                                </tr>
+                                            {% endfor %}
+                                            <tr class="table-light fw-bold text-center">
+                                                <td class="text-start ps-4">VALORES TOTALES</td>
+                                                <td>{{ "%.0f"|format(t.g) }}g</td>
+                                                <td>{{ "%.0f"|format(t.k) }}</td>
+                                                <td>{{ "%.1f"|format(t.p) }}g</td>
+                                                <td>{{ "%.1f"|format(t.c) }}g</td>
+                                                <td>{{ "%.1f"|format(t.f) }}g</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-3 d-flex gap-2 justify-content-end bg-light border-top">
+                                    <a href="{{ url_for('edit_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-primary shadow-sm">Modificar</a>
+                                    <a href="{{ url_for('delete_recipe', recipe_id=r.id) }}" class="btn btn-sm btn-outline-danger shadow-sm" onclick="return confirm('¿Borrar?')">Eliminar</a>
                                 </div>
                             </div>
                         </div>
@@ -108,30 +163,29 @@
             </div>
         </div>
 
-        <div class="mt-3">
-            <a href="/" class="btn btn-link text-secondary">&laquo; Volver al diario</a>
+        <div class="mt-4">
+            <a href="/" class="btn btn-link text-secondary text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Volver al diario
+            </a>
         </div>
     </div>
 </div>
 
 <script>
 /**
- * Lógica de filtrado en tiempo real. 
- * Escucha el teclado y oculta las filas o acordeones que no coincidan con la búsqueda.
+ * Lógica de filtrado en tiempo real.
  */
 document.getElementById('searchInput').addEventListener('keyup', function() {
     let filter = this.value.toLowerCase();
     
-    // Filtro para la pestaña de alimentos base
-    let foods = document.querySelectorAll('.food-item');
-    foods.forEach(food => {
+    // Filtro para alimentos
+    document.querySelectorAll('.food-item').forEach(food => {
         let name = food.querySelector('.food-name').textContent.toLowerCase();
         food.style.display = name.includes(filter) ? '' : 'none';
     });
 
-    // Filtro para la pestaña de recetas personalizadas
-    let recipes = document.querySelectorAll('.recipe-item');
-    recipes.forEach(recipe => {
+    // Filtro para recetas
+    document.querySelectorAll('.recipe-item').forEach(recipe => {
         let name = recipe.querySelector('.recipe-name').textContent.toLowerCase();
         recipe.style.display = name.includes(filter) ? '' : 'none';
     });
